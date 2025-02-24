@@ -1,6 +1,7 @@
 #pysim imports
 from pysim.utils import yesno
 #nonpysim imports
+import numpy as np
 from glob import glob 
 from shutil import copy, move, copytree, rmtree
 from os.path import isdir, isfile, exists
@@ -14,6 +15,18 @@ def ensure_path(path):
         if "/".join(parts[:i]) in "/home/x-kgootkin/": continue
         if not exists("/".join(parts[:i])):
             mkdir("/".join(parts[:i]))
+
+class InputParameter:
+    def __init__(self, name: str, value, comment: str = None) -> None:
+        self.name = name
+        self.input_name = name if type(value) not in [list, tuple, np.ndarray] else f"{name}(1:{len(value)})"
+        self.value = value 
+        self.comment = "" if comment is None else "!"+comment
+    def __str__(self) -> str:
+        #            two tabs           parameter=value          make it 40 characters  then add comment
+        show_string = " "*8 + f"{self.input_name}={python2input(self.value)}".ljust(40)+self.comment
+        return show_string if self.value is not None else f"!{show_string}"
+    def __repr__(self) -> str: return f"{self.name}: {self.value}"
 
 class Folder:
     def __init__(self, path:str, master=None) -> None:

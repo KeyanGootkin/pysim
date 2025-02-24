@@ -3,6 +3,9 @@ from contextlib import contextmanager
 from tqdm import tqdm
 import inspect
 
+def where_closest(arr:np.ndarray, x): return np.argmin(np.abs(arr-x))
+def where_between(arr:np.ndarray, low, high): return np.where((arr>=low)&(arr<=high))
+
 def bin_this(x, y, n_bins=50, func=np.nanmean):
     xbins = np.linspace(np.nanmin(x),np.nanmax(x),n_bins)
     Y,error = list(),list()
@@ -72,9 +75,9 @@ def nan_clip(*args):
 
 # Spectrum Functions
 def kspec(image: np.ndarray) -> np.ndarray:
-    return np.absolute(np.fft.fftshift(np.fft.fft2(image) / (1. * image.shape[0] * image.shape[1])))
+    return np.absolute(np.fft.fftshift(np.fft.fft2(image) / (1. * image.shape[0] * image.shape[1])))**2
 
-def kspec1d(image: np.ndarray, bins: int = 100) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def kspec1d(image: np.ndarray, bins: int = 100, return_bin_edges: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     k = kspec(image)
     Ny, Nx = image.shape
     kmag = np.hypot(*np.mgrid[
@@ -83,8 +86,9 @@ def kspec1d(image: np.ndarray, bins: int = 100) -> tuple[np.ndarray, np.ndarray,
                      ][::-1])
     kmin = np.nanmin(kmag[kmag != 0])
     kmax = np.nanmax(kmag)
-    kgrid = np.logspace(np.log10(kmin), np.log10(kmax), bins + 1)
+    kgrid = np.r_[[0], np.logspace(np.log10(3*kmin), np.log10(kmax), bins)]
     kx = np.array([np.mean([kgrid[i], kgrid[i+1]]) for i in range(len(kgrid)-1)])
     ks = np.array([np.mean(k[np.where((kgrid[i] < kmag) & (kmag < kgrid[i+1]))]) for i in range(len(kgrid)-1)])
     kerr = np.array([np.std(in_bin:=k[np.where((kgrid[i] < kmag) & (kmag < kgrid[i+1]))])/np.sqrt(len(in_bin)) for i in range(len(kgrid)-1)])
-    return kx, ks, kerr
+    if not return_bin_edges: return kx, ks, kerr
+    return kgrid, kx, ks, kerr

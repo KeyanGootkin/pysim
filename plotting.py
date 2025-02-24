@@ -1,15 +1,18 @@
 #pysim imports
 from pysim.utils import nan_clip
-from pysim.parsing import File, Folder
+from pysim.parsing import File, Folder, ensure_path
 from pysim.environment import frameDir, videoDir
 #nonpysim imports
 import numpy as np 
 import matplotlib.pyplot as plt 
 from matplotlib.colors import LogNorm, SymLogNorm, TwoSlopeNorm, Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import moviepy.video.io.ImageSequenceClip
-from moviepy.editor import VideoClip, VideoFileClip
-from moviepy.video.io.bindings import mplfig_to_npimage
+from matplotlib.animation import FuncAnimation
+
+# import moviepy.video.io.ImageSequenceClip
+# from moviepy.editor import VideoClip, VideoFileClip
+# from moviepy.video.io.bindings import mplfig_to_npimage
+
 from functools import wraps
 import os
 
@@ -305,17 +308,17 @@ def show_video(
         def simple_video_wrapper(
             s, *args, 
             cmap=cmap, norm=norm, figsize=figsize, 
-            savedir=videoDir.path, compress=1, fps=10, **kwargs
+            savedir=videoDir.path, compress=1, fps=10, dpi=250,
+            **kwargs
         ):
             # make a directory to store frames in
-            Folder(
-                fpath := f"{frameDir.path}/{s.name}/{name}/"
-            ).make()
+            Folder(f"{frameDir.path}/{s.name}/{name}/").make()
             Folder(savedir).make()
             # make the frames and return as a numpy array
             frames = func(s, *args, **kwargs)
             # plot the frames
             fig,ax = plt.subplots(figsize=figsize)
+            fig.set_dpi(dpi)
             normalization = norm if not isinstance(norm, str) else auto_norm(norm, frames)
             *_,img = show(
                 frames[0], 

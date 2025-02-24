@@ -10,15 +10,14 @@ from numpy import pi
 def field_dot(A: np.ndarray, B: np.ndarray) -> np.ndarray: return np.sum(A * B, axis=0)
 
 class dHybridRconfig(File):
-    def __init__(self, parent):
+    def __init__(self, parent, mode: str|None = None) -> None:
         self.parent = parent 
         path = f"{self.parent.path}/config"
         File.__init__(self, path)
-        #if the file doesn't already exist  don't do the rest of the setup
-        if not self.exists(): return None
+        if mode: self.mode = mode
         self.read()
 
-    def read(self):
+    def read(self) -> None:
         self.params = []
         with open(self.path, 'r') as file:
             self.lines = file.readlines()
@@ -33,15 +32,22 @@ class dHybridRconfig(File):
                 name, value = (x.strip() for x in line.split("="))
                 self.params.append(name)
                 setattr(self, name, value)
-        if "mode" not in self.params: raise KeyError(f"config file {path} doesn't have a mode set")
+        if "mode" not in self.params: self.set_interactive()
     
-    def write(self):
+    def write(self) -> None:
         self.lines = [
             f"mode={self.mode}"
         ] + [
             f"{n}={getattr(self,n)}" for n in self.params if n!='mode'
         ]
         with open(self.path, 'w') as file: file.write("\n".join(self.lines))
+
+    def set_interactive(self) -> None:
+        print("this simulation hasn't been configured yet.")
+        self.mode = input("What mode? ").lower()
+        while len(new_param:=input("param: ").strip())>0:
+            setattr(self, new_param, input("value: "))
+        self.write()
 
 class dHybridRSnapshot:
     def __init__(
@@ -97,9 +103,9 @@ class TurbInit(dHybridRinitializer):
         simulation
     ):
         self.config = dHybridRconfig(simulation)
-        self.mach = float(self.config.mach)
-        self.dB = float(self.config.dB)
-        self.amplitude: tuple[float, float] = (self.dB, self.mach)
+        self.mach = self.config.mach
+        self.dB = self.config.dB
+        self.amplitude: tuple = (self.dB, self.mach)
         self.kinit = (1, np.pi) if 'kinit' not in self.config.params else (float(x) for x in self.config.kinit.split(','))
         dHybridRinitializer.__init__(self, simulation)
         self.kmin: float = 2 * pi / max(self.L)
@@ -133,7 +139,60 @@ class TurbInit(dHybridRinitializer):
                 dHybridRSnapshot(self.simulation, np.argmin(abs(self.simulation.tau - n))) for n in range(1, int(self.simulation.tau[-1]//1))
             ]
 
-    def fluctuate(self, field, amp, no_div=True):
+    def fluctuate3D(self, field, amp, no_div=True):
+        init_mask = np.where((self.kinit[0] * self.kmin < self.kmag)&(self.kmag < self.kinit[1]*self.kmin))
+        M = np.array(init_mask).flatten().size
+        phases = np.exp(2j * np.pi * np.random.random(field.shape))
+
+        FT = np.zeros(field.shape, dtype=complex)
+        FT[0][init_mask] = amp[0] * np.pi / 2
+        FT[1][init_mask] = amp[1] * np.pi
+        FT[2][init_mask] = amp[2] * np.pi / 2
+        FT *= phases
+
+        # subtract off the parallel x/y components
+        FT -= field_dot(FT, self.k / self.kmag) * self.k / self.kmag
+        FT[np.isnan(FT)] = 0
+
+        # apply the condition to make this real
+        _fx = np.roll(FT[1, ::-1, ::-1, ::-1], 1, axis=(0, 1, 2))
+        FT[1, :self.Ny // 2, :self.Nx // 2, :self.Nz // 2] = np.conj(_fx[:self.Ny // 2, :self.Nx // 2, :self.Nz // 2])
+        FT[1, self.Ny // 2:, :self.Nx // 2, :self.Nz // 2] = np.conj(_fx[self.Ny // 2:, :self.Nx // 2, :self.Nz // 2])
+        FT[1, :self.Ny // 2, :self.Nx // 2, self.Nz // 2:] = np.conj(_fx[:self.Ny // 2, :self.Nx // 2, self.Nz // 2:])
+        FT[1, self.Ny // 2:, :self.Nx // 2, self.Nz // 2:] = np.conj(_fx[self.Ny // 2:, :self.Nx // 2, self.Nz // 2:])
+
+        _fy = np.roll(FT[0, ::-1, ::-1, ::-1], 1, axis=(0, 1, 2))
+        FT[0, :self.Ny // 2, :self.Nx // 2, :self.Nz // 2] = np.conj(_fy[:self.Ny // 2, :self.Nx // 2, :self.Nz // 2])
+        FT[0, :self.Ny // 2, :self.Nx // 2, :self.Nz // 2] = np.conj(_fy[:self.Ny // 2, :self.Nx // 2, :self.Nz // 2])
+        FT[0, self.Ny // 2:, :self.Nx // 2, :self.Nz // 2] = np.conj(_fy[self.Ny // 2:, :self.Nx // 2, :self.Nz // 2])
+        FT[0, :self.Ny // 2, :self.Nx // 2, self.Nz // 2:] = np.conj(_fy[:self.Ny // 2, :self.Nx // 2, self.Nz // 2:])
+        FT[0, self.Ny // 2:, :self.Nx // 2, self.Nz // 2:] = np.conj(_fy[self.Ny // 2:, :self.Nx // 2, self.Nz // 2:])
+
+        _fz = np.roll(FT[2, ::-1, ::-1, ::-1], 1, axis=(0, 1, 2))
+        FT[2, :self.Ny // 2, :self.Nx // 2, :self.Nz // 2] = np.conj(_fz[:self.Ny // 2, :self.Nx // 2, :self.Nz // 2])
+        FT[2, :self.Ny // 2, :self.Nx // 2, :self.Nz // 2] = np.conj(_fz[:self.Ny // 2, :self.Nx // 2, :self.Nz // 2])
+        FT[2, self.Ny // 2:, :self.Nx // 2, :self.Nz // 2] = np.conj(_fz[self.Ny // 2:, :self.Nx // 2, :self.Nz // 2])
+        FT[2, :self.Ny // 2, :self.Nx // 2, self.Nz // 2:] = np.conj(_fz[:self.Ny // 2, :self.Nx // 2, self.Nz // 2:])
+        FT[2, self.Ny // 2:, :self.Nx // 2, self.Nz // 2:] = np.conj(_fz[self.Ny // 2:, :self.Nx // 2, self.Nz // 2:])
+
+        # I think we have to fix the zero line
+        FT[:, self.Ny // 2, :, :] = 0.j
+        FT[:, :, self.Nx // 2, :] = 0.j
+        FT[:, :, :, self.Nz // 2] = 0.j
+
+        # take the inverse fourier transform
+        y: np.ndarray = np.real(
+            np.fft.ifftn(
+                np.fft.ifftshift(
+                    FT
+                )
+            )
+        ) / M * self.Nx * self.Ny * self.Nz
+        rms = np.sqrt(np.nanmean(y[0]**2 + y[1]**2 + y[2]**2))
+        y *= (amp / rms)
+        return np.float32(y)
+
+    def fluctuate2D(self, field, amp, no_div=True):
         """
         Given the initialization create a 2d array the same shape as the simulation which will smoothly fluctuate
         over length scales kinit
@@ -182,6 +241,13 @@ class TurbInit(dHybridRinitializer):
         rms = np.sqrt(np.nanmean(y[0]**2 + y[1]**2))
         y *= (amp / rms)
         return np.float32(y)
+    
+    def fluctuate(self, field, amp, no_div=True):
+        if type(amp) in [int, float]: return self.fluctuate2D(field, amp, no_div=no_div)
+        elif type(amp) in [list, np.ndarray, tuple]: 
+            if len(amp) == 2: amp = [amp[0], amp[0], amp[1]]
+            return self.fluctuate3D(field, amp, no_div=no_div)
+
     def construct_field(self, x, y, z, amp, no_div=True):
         """
         Constructs a 3 x N x N array representing a constant x, y, and z component with additional fluctuations

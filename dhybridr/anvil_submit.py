@@ -38,7 +38,7 @@ class AnvilSubmitScript(File):
         queue: str = "wholenode",
         time_limit: str = "24:00:00",
         email: str|None = None,
-        allocation: str = "phy220089"
+        allocation: str = "ast180008"
     ) -> None:
         File.__init__(self, path, master=dHybridRtemplate.path+"/submit_anvil.sh")
         assert queue.lower() in ["wholenode", "debug"], f"Queue: {queue} not available, please choose either wholenode or debug"

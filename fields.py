@@ -12,6 +12,12 @@ from os.path import isdir, isfile
 import builtins
 from matplotlib.cm import plasma as default_cmap
 
+def divergence(Fx, Fy, dx=.5, dy=.5, order=2):
+    assert len(Fx.shape)==2, "sorry, only accept 2 spatial dimensions rn :("
+    dFdx = np.roll(Fx, order, axis=1) - np.roll(Fx, -order, axis=1) / dx
+    dFdy = np.roll(Fy, order, axis=0) - np.roll(Fy, -order, axis=0) / dy
+    return (dFdx + dFdy) / (2 * order)
+
 def curlz(X, Y, order: int = 2) -> np.ndarray:
     """
     take the z-component of the curl at each point in a field
@@ -212,11 +218,12 @@ class VectorField:
 
     def __len__(self) -> int: return min([len(self.x), len(self.y), len(self.z)])
     def __abs__(self) -> np.ndarray:
+        homo = all([len(self.x[i])==len(self.x[0]) for i in range(len(self))])
         return np.array([
             np.sqrt(sum([
                 c[i]**2 for c in self.components
             ])) for i in verbose_bar(range(len(self)), self.verbose, desc="taking magnitude...")
-        ])
+        ], dtype=float if homo else object)
     def __getitem__(self, item: int|slice) -> np.ndarray:
         match type(item):
             case builtins.int: return np.array([c[item] for c in self.components])
@@ -276,6 +283,20 @@ class VectorField:
                     )
                 ]
                 return np.array([curlz(self.x[i], self.y[i], order=order) for i in item_iters])
+    def div(self, item: int|slice, order: int = 2):
+        if not item: return np.array([divergence(self.x[i], self.y[i], dx=self.dx, dy=self.dy, order=order) for i in range(len(self))])
+        match type(item):
+            case builtins.int: return divergence(self.x[item], self.y[item], dx=self.dx, dy=self.dy, order=order)
+            case builtins.slice:
+                item_iters = [
+                    i for i in range(
+                        item.start if not item.start is None else 0, 
+                        item.stop if not item.stop is None else len(self), 
+                        item.step if not item.step is None else 1
+                    )
+                ]
+                return np.array([divergence(self.x[i], self.y[i], dx=self.dx, dy=self.dy, order=order) for i in item_iters])
+                
 
     def calc_Jz(self, item=None, verbose=True):
         if not item: self.Jz = np.array([np.nanstd(j) for j in verbose_bar(self.curlz(slice(0,len(self))), verbose)])
@@ -318,12 +339,12 @@ class VectorField:
     def movie(self, mode='mag', norm='none', cmap=default_cmap, **kwrg) -> None:
         match mode.lower():
             case 'mag'|'magnitude'|'abs':
-                @show_video(name=self.name+"_magnitude", latex=f"$|{self.name}|$", norm=norm, cmap=cmap)
+                @show_video(name=self.name+"_magnitude", latex=fr"$|{self.name}|$", norm=norm, cmap=cmap)
                 def reveal_thyself(s, **kwargs): return abs(self)
             case 'perp'|'perpendicular':
-                @show_video(name=self.name+"_perp", latex=f"${self.name}_\perp$", norm=norm, cmap=cmap)
+                @show_video(name=self.name+"_perp", latex=fr"${self.name}_\perp$", norm=norm, cmap=cmap)
                 def reveal_thyself(s, **kwargs): return self.perp                
             case 'par'|'parallel':
-                @show_video(name=self.name+"_par", latex=f"${self.name}_\parallel$", norm=norm, cmap=cmap)
+                @show_video(name=self.name+"_par", latex=fr"${self.name}_\parallel$", norm=norm, cmap=cmap)
                 def reveal_thyself(s, **kwargs): return np.array([self.parallel[i] for i in range(len(self))])
         reveal_thyself(self if self.parent is None else self.parent, **kwrg)

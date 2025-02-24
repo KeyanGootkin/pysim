@@ -5,7 +5,7 @@ from pysim.environment import dHybridRtemplate
 from pysim.fields import ScalarField, VectorField
 from pysim.simulation import GenericSimulation
 from pysim.dhybridr.input import dHybridRinput
-from pysim.dhybridr.initializer import dHybridRinitializer
+from pysim.dhybridr.initializer import dHybridRinitializer, TurbInit, dHybridRconfig
 from pysim.dhybridr.anvil_submit import AnvilSubmitScript
 #nonpysim imports
 import numpy as np 
@@ -79,3 +79,17 @@ class dHybridR(GenericSimulation):
             self.dlne
         ] = np.array([[*extract_energy(f)] for f in self.etx1.file_names], dtype=object).T
 
+
+class TurbSim(dHybridR):
+    def __init__(
+            self, 
+            path: str,
+            caching: bool = False,
+            verbose: bool = False,
+            template: Folder = dHybridRtemplate,
+            compressed: bool = False
+        ) -> None:
+        dHybridR.__init__(self, path, caching=caching, verbose=verbose, template=template, compressed=compressed)
+        self.config = dHybridRconfig(self, mode='turb')
+        
+        self.initializer = TurbInit(self)

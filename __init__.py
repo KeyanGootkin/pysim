@@ -7,3 +7,5 @@ from pysim.plotting import *
 from pysim.fields import *
 from pysim.simulation import *
 from pysim.dhybridr import *
+from pysim.athena import *
+from pysim.tristan import *

@@ -1,5 +1,5 @@
 #pysim imports
-from pysim.parsing import File
+from pysim.parsing import File, InputParameter
 from pysim.environment import dHybridRtemplate
 #nonpysim imports
 import numpy as np
@@ -99,17 +99,6 @@ def is_input_species_section_header(line: str, species: int = None) -> bool:
     if species: return is_input_section_header(line) and f"for species {species}" in line 
     else: return any([is_input_section_header(line) and f"for species {sp}" in line for sp in range(10)])
 
-class InputParameter:
-    def __init__(self, name: str, value, comment: str = None) -> None:
-        self.name = name
-        self.input_name = name if type(value) not in [list, tuple, np.ndarray] else f"{name}(1:{len(value)})"
-        self.value = value 
-        self.comment = "" if comment is None else "!"+comment
-    def __str__(self) -> str:
-        #            two tabs           parameter=value          make it 40 characters  then add comment
-        show_string = " "*8 + f"{self.input_name}={python2input(self.value)}".ljust(40)+self.comment
-        return show_string if self.value is not None else f"!{show_string}"
-    def __repr__(self) -> str: return f"{self.name}: {self.value}"
 
 class InputSection:
     def __init__(self, lines: list) -> None:
