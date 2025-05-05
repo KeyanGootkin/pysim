@@ -2,9 +2,11 @@
 # >-|===|>                             Imports                             <|===|-<
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 
-from pysim.parsing import Folder, InputParameter
+from pysim.parsing import Folder
 from pysim.fields import ScalarField, VectorField
 from pysim.simulation import GenericSimulation
+
+from pysim.dhybridr.io import InputParameter
 
 from glob import glob
 import numpy as np
@@ -13,7 +15,7 @@ from h5py import File
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # >-|===|>                           Definitions                           <|===|-<
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
-
+# keys are parameters and values are the type of file to read those from
 tristan_param_file_convert = {
     'bx': 'flds.tot', 
     'by': 'flds.tot', 
@@ -109,6 +111,7 @@ def tristan_loader(
         sim_path: str, inds: list[int], params: list[str], 
         zfill_level: int = 3, padding: int = 3
 ) -> dict:
+    # Colby wrote this one I think?
     output = {}
     param_files = [tristan_param_file_convert[pi] for pi in params]
     # for each file we need to read
@@ -132,6 +135,11 @@ class TristanInput:
             self,
             path: str,
     ):
+        """A class for reading/storing info from Tristan input files.
+
+        Args:
+            path (str): path to the input file.
+        """
         self.path = path
         with open(self.path, 'r') as file:
             self.lines = file.readlines()
@@ -156,6 +164,18 @@ class TristanScalarField(ScalarField):
             zfill_level: int = 3,
             padding: int = 3
     ):
+        """A ScalarField object specialized for Tristan output files.
+
+        Args:
+            param_key (str): key used to store info in output files
+            parent (Tristan, optional): The parent simultion from which to read outputs. Defaults to None.
+            caching (bool, optional): Whether to store field values after reading. Defaults to False.
+            verbose (bool, optional): Doesn't do much rn but might be good for debugging later. Defaults to False.
+            name (str, optional): Name of field to be used in e.g. saving plots of. Defaults to None.
+            latex (str, optional): Name of field to be used when using latex. Defaults to None.
+            zfill_level (int, optional): Number of 0's to use when constructing file names. Defaults to 3.
+            padding (int, optional): number of overflow cells surrounding simulation domain. Defaults to 3.
+        """
         ScalarField.__init__(
             self,
             None,
@@ -186,6 +206,16 @@ class TristanParticleQuantity(TristanScalarField):
             name: str = None,
             latex: str = None
     ):
+        """Object for storing Tristan particle data
+
+        Args:
+            param_key (str): key used to access output data
+            parent (Tristan, optional): Simulation from which output is drawn. Defaults to None.
+            caching (bool, optional): Whether to store data after reading. Defaults to False.
+            verbose (bool, optional): Doesn't do much for now. Defaults to False.
+            name (str, optional): Name to use in e.g. filenames. Defaults to None.
+            latex (str, optional): name to use in latex. Defaults to None.
+        """
         TristanScalarField.__init__(
             self,
             param_key,
@@ -200,13 +230,23 @@ class TristanParticleQuantity(TristanScalarField):
 class TristanParticleSpecies:
     def __init__(
             self,
-            name,
+            name: str,
             parent = None,
             m: float = 1.,
             q: float = 1.,
             N: int = None,
             sig: str = ""
     ):
+        """Object to store data for a particle species from a Tristan simulation.
+
+        Args:
+            name (str): Name of the particle species
+            parent (Tristan, optional): Simulation from which to draw data. Defaults to None.
+            m (float, optional): mass. Defaults to 1..
+            q (float, optional): charge. Defaults to 1..
+            N (int, optional): number of particles. Defaults to None.
+            sig (str, optional): signature to add to the end of keys e.g. 'i' for ions. Defaults to "".
+        """
         self.name = name 
         self.m = m 
         self.q = q 
@@ -240,6 +280,15 @@ class Tristan(GenericSimulation):
             verbose: bool = False,
             compressed: bool = False
     ):
+        """Object to interact with Tristan simulations.
+
+        Args:
+            path (str): path to simulation top-level
+            template (str | Folder, optional): template from which to compare. Defaults to None.
+            caching (bool, optional): whether to store data after reading it in. Defaults to False.
+            verbose (bool, optional): Doesn't do much rn. Defaults to False.
+            compressed (bool, optional): Whether this is a full simulation or just some timestamps. Defaults to False.
+        """
         self.compressed = compressed
         GenericSimulation.__init__(self, path, template=template, caching=caching, verbose=verbose)
         self.parse_input()
@@ -249,6 +298,8 @@ class Tristan(GenericSimulation):
     def __repr__(self): return f"Tristan Simulation: {self.path}"
 
     def parse_input(self):
+        """Read input file and construct relevant quantities
+        """
         self.input = TristanInput(self.path+"/input")
         # time
         self.c = self.input.c.value
@@ -273,6 +324,8 @@ class Tristan(GenericSimulation):
         self.dy = np.diff(self.y)[0]
 
     def parse_output(self):
+        """Read output files and construct relevant data structures.
+        """
         kwargs = {'caching':self.caching, 'verbose':self.verbose, 'parent':self}
         self.B = VectorField(
             TristanScalarField("bx", name='bx', latex='$B_x$', **kwargs),
@@ -294,8 +347,8 @@ class Tristan(GenericSimulation):
         )
         self.u = VectorField(
             TristanScalarField("v3x", name='ux', latex='$u_x$', **kwargs),
-            TristanScalarField("v3y", name='ux', latex='$u_y$', **kwargs),
-            TristanScalarField("v3z", name='ux', latex='$u_z$', **kwargs),
+            TristanScalarField("v3y", name='uy', latex='$u_y$', **kwargs),
+            TristanScalarField("v3z", name='uz', latex='$u_z$', **kwargs),
             name='bulk-flow', latex=r"$\vec{u}$", **kwargs
         )
         self.density = TristanScalarField("dens", name='density', latex=r"$\rho$", **kwargs)
@@ -303,6 +356,15 @@ class Tristan(GenericSimulation):
         self.electrons = TristanParticleSpecies("electron", parent=self, m=self.input.me.value, q=-1, sig='e')
 
     def load(self, params: list[str], item: int|slice = slice(None, None)):
+        """loads data from params at item times.
+
+        Args:
+            params (list[str]): keys representing data to load
+            item (int | slice, optional): which timestamps to load data for. Defaults to slice(None, None).
+
+        Returns:
+            data (dict): a dictionary with params as keys and values corresponding to the data at each time in item.
+        """
         match item:
             case int(): 
                 items = [item]

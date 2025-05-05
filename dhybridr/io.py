@@ -1,8 +1,9 @@
 #pysim imports
-from pysim.parsing import File, InputParameter
+from pysim.parsing import File
 from pysim.environment import dHybridRtemplate
 #nonpysim imports
 import numpy as np
+from datetime import datetime
 
 # fortran parsing
 def input_match(input_code: str):
@@ -100,6 +101,18 @@ def is_input_species_section_header(line: str, species: int = None) -> bool:
     else: return any([is_input_section_header(line) and f"for species {sp}" in line for sp in range(10)])
 
 
+class InputParameter:
+    def __init__(self, name: str, value, comment: str = None) -> None:
+        self.name = name
+        self.input_name = name if type(value) not in [list, tuple, np.ndarray] else f"{name}(1:{len(value)})"
+        self.value = value 
+        self.comment = "" if comment is None else "!"+comment
+    def __str__(self) -> str:
+        #            two tabs           parameter=value          make it 40 characters  then add comment
+        show_string = " "*8 + f"{self.input_name}={python2input(self.value)}".ljust(40)+self.comment
+        return show_string if self.value is not None else f"!{show_string}"
+    def __repr__(self) -> str: return f"{self.name}: {self.value}"
+
 class InputSection:
     def __init__(self, lines: list) -> None:
         self.lines = lines
@@ -175,7 +188,7 @@ class dHybridRinput(File):
         #init file properties
         File.__init__(self, path, master=dHybridRtemplate.path+"input/input", executable=False)
         #if doesn't exist, make a copy from master
-        if not self.exists(): self.update()
+        # if not self.exists: self.update()
         #read in the current file
         with open(self.path, 'r') as file: self.lines = file.read().split("\n")
         #get rid of empty lines
@@ -255,3 +268,26 @@ class dHybridRinput(File):
         ]
         #write lines
         with open(self.path, 'w') as file: file.write("\n".join(self.lines))
+
+class dHybridRout(File):
+    def __init__(self, path: str) -> None:
+        super().__init__(path)
+        self.read()
+        # if self.end and self.start:
+        #     self.dt: datetime = (self.end - self.start)
+        #     self.runtime: float = self.dt.seconds / 60. / 60.
+
+    def read(self):
+        with open(self.path, 'r') as file:
+            self.lines: list[str] = file.readlines()
+            for i,li in enumerate(self.lines):
+                line: list[str] = li.strip().split()
+                match line:
+                    case ['Run', 'started', *_]:
+                        [_, _, day, _, month, _, year, _, hour, _] = line
+                        [minute, _, second, _, milisecond] = self.lines[i+1].strip().split()
+                        self.start: datetime = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
+                    case ['Run', 'terminated', 'successfully', *_]: 
+                        [_, _, _, day, _, month, _, year, _] = line
+                        [hour, _, minute, _, second, _, milisecond] = self.lines[i+1].strip().split()
+                        self.end: datetime = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))

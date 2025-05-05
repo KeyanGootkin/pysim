@@ -15,5 +15,5 @@ if __name__ == '__main__':
     if os.path.exists("Restart"): shutil.rmtree("Restart")
     # make init files
     Init = sim.TurbInit(amp, k)
-    Init.saveFortran(path='input/')
+    Init.prepare_simulation()
     os.system("sh submit_anvil.sh")

@@ -5,13 +5,13 @@
 !---------- node configuration -------------------------------------------------
 node_conf
 {
-        node_number(1:2)=16,16,                ! num of processes in each dimension
+        node_number(1:2)=8,8,8,                ! num of processes in each dimension
 }
 !---------- time ---------------------------------------------------------------
 time
 {
-        dt=0.002,                              ! time step
-        niter=250000,                          ! number of iterations
+        dt=0.01,                              ! time step
+        niter=10000,                          ! number of iterations
         t0=0.,                                 ! initial time
         stiter=0,                              ! starting iteration number
         c=100,                                 ! speed of light
@@ -19,10 +19,10 @@ time
 !---------- grid and space -----------------------------------------------------
 grid_space
 {
-        ncells(1:2)=1024,1024,                 ! Grid size in number of cells in each dimension
-        boxsize(1:2)=512.,512.,                ! Simulation box size in normalized units
+        ncells(1:2)=64,64,64,                 ! Grid size in number of cells in each dimension
+        boxsize(1:2)=32.,32.,32.,                ! Simulation box size in normalized units
                !xl,  xr,   yl,   yr,   zl,   zr
-        bdtype="per","per","per","per",         
+        bdtype="per","per","per","per","per","per",         
         Te=1.0,
         gamma=1.66667,
 }
@@ -94,7 +94,7 @@ species
 {
         name="H+",
         dist="THERMAL",                        ! type of vel. distribution (THERMAL or ISO)
-        num_par(1:2)=10,10,                    ! Number of particles per cell
+        num_par(1:2)=3,3,3,                    ! Number of particles per cell
         spare_size=.1,                         ! % (0 to 1) of unused space in part vector
         ir=1,                                  ! ionization ratio
         rqm=1.,                                ! charge to mass ratio (inverse)
@@ -115,7 +115,7 @@ boundary_conditions
 {
                                                ! bdtype - per, therm, reflect, open (for each wall)
         !      xl,   xr,   yl,   yr,   zl,   zr
-        bdtype="per","per","per","per", 
+        bdtype="per","per","per","per","per","per",
         vth=0.,                                ! for thermal bath - ignored for others
 }
 !----------diagnostic for species 1---------------------------------------------

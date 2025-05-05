@@ -16,24 +16,12 @@ def ensure_path(path):
         if not exists("/".join(parts[:i])):
             mkdir("/".join(parts[:i]))
 
-class InputParameter:
-    def __init__(self, name: str, value, comment: str = None) -> None:
-        self.name = name
-        self.input_name = name if type(value) not in [list, tuple, np.ndarray] else f"{name}(1:{len(value)})"
-        self.value = value 
-        self.comment = "" if comment is None else "!"+comment
-    def __str__(self) -> str:
-        #            two tabs           parameter=value          make it 40 characters  then add comment
-        show_string = " "*8 + f"{self.input_name}={python2input(self.value)}".ljust(40)+self.comment
-        return show_string if self.value is not None else f"!{show_string}"
-    def __repr__(self) -> str: return f"{self.name}: {self.value}"
-
 class Folder:
     def __init__(self, path:str, master=None) -> None:
         self.path = path.replace("\\", "/")
         self.name = self.path.split("/")[-1] if len(self.path.split('/')[-1])>0 else self.path.split("/")[-2]
         self.master = master if not isinstance(master, str) else Folder(master)
-
+    @cached_property
     def exists(self) -> bool: return exists(self.path)
     @cached_property
     def children(self) -> list: return glob(self.path+"/*")
@@ -42,7 +30,7 @@ class Folder:
     def copy(self, destination:str) -> None: copytree(self.path, destination)
     def update(self) -> None:
         assert self.master, "No master copy to update from."
-        if self.exists(): self.delete(interactive=False)
+        if self.exists: self.delete(interactive=False)
         self.master.copy(self.path)
         self = Folder(self.path, master=self.master)
     def delete(self, interactive=True) -> None:
@@ -62,12 +50,13 @@ class File:
     def copy(self, destination:str): copy(self.path, destination)
     def move(self, destination:str): 
         move(self.path, destination)
-        self = File(destination, master=self.master)
+        self = File.__init__(destination, master=self.master, executable=self.executable)
+    @cached_property
     def exists(self): return exists(self.path)
     def update(self) -> None:
         print('updating')
         assert self.master, "No master copy to update from."
-        if self.exists(): self.delete(interactive=False)
+        if self.exists: self.delete(interactive=False)
         self.master.copy(self.path)
         self = File(self.path, master=self.master)
     def delete(self, interactive=True) -> None:

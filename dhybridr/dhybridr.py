@@ -4,7 +4,7 @@ from pysim.parsing import Folder
 from pysim.environment import dHybridRtemplate
 from pysim.fields import ScalarField, VectorField
 from pysim.simulation import GenericSimulation
-from pysim.dhybridr.input import dHybridRinput
+from pysim.dhybridr.io import dHybridRinput, dHybridRout
 from pysim.dhybridr.initializer import dHybridRinitializer, TurbInit, dHybridRconfig
 from pysim.dhybridr.anvil_submit import AnvilSubmitScript
 #nonpysim imports
@@ -41,10 +41,17 @@ class dHybridR(GenericSimulation):
         #setup input, output, and restart folders
         self.parse_input()
         self.outputDir = Folder(self.path+"/Output")
-        if not self.outputDir.exists():
-            if yesno("There is no output, would you like to run this simulation?\n"): 
-                self.run()
-        else: self.parse_output()
+        if not self.outputDir.exists:
+            if verbose:
+                if yesno("There is no output, would you like to run this simulation?\n"): 
+                    self.run()
+        else: 
+            self.parse_output()
+            # self.runtime: float = self.out.runtime #run time as calculated from out file, in hours
+            self.ncores: int = int(np.prod(self.input.node_number))
+            self.ncores_charged: int = self.ncores + self.ncores % 128
+            # self.corehours: float = self.runtime * np.prod(self.ncores)
+            # self.corehours_charged: float = self.runtime * self.ncores_charged
         self.restartDir = Folder(self.path+"/Restart")
     def __repr__(self) -> str: return self.name
     def create(self) -> None:
@@ -61,6 +68,7 @@ class dHybridR(GenericSimulation):
         submit_script.write()
         system(f"sh {submit_script.path}")
     def parse_output(self) -> None:
+        self.out = dHybridRout(self.path+"/out")
         kwargs = {'caching':self.caching, 'verbose':self.verbose, 'parent':self}
         self.B       = VectorField(self.path + "/Output/Fields/Magnetic/Total/", name="magnetic", latex="B", **kwargs)
         self.E       = VectorField(self.path + "/Output/Fields/Electric/Total/", name="electric", latex="E", **kwargs)

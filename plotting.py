@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from matplotlib.colors import LogNorm, SymLogNorm, TwoSlopeNorm, Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 
 # import moviepy.video.io.ImageSequenceClip
 # from moviepy.editor import VideoClip, VideoFileClip
@@ -37,6 +37,19 @@ def auto_norm(
     center: float|None = None, 
     saturate: float|None = None
 ):
+    """A function to create a matplotlib normalization given a set images.
+
+    Args:
+        norm (str): what type of scale to use, e.g. lognorm or centerednorm
+        frames (np.ndarray): the images to base the normalization on
+        linear_threshold (float | None, optional): for symlognorm. Defaults to None.
+        center (float | None, optional): for centered normalizations. Defaults to None.
+        saturate (float | None, optional): the level at which to saturate the norm, e.g. if saturate=0.01 then the 
+            max is the 99th percentile. Defaults to None.
+
+    Returns:
+        matplotlib normalization
+    """
     frames = frames[(-np.inf < frames)&(frames < np.inf)]
     # set min/max IF saturate is None                          or IF saturate is a tuple                                          ELSE assume its a float
     low = np.nanmin(frames) if saturate is None else np.nanquantile(frames, 1-saturate[0]) if isinstance(saturate, tuple) else np.nanquantile(frames, 1-saturate)
@@ -60,12 +73,12 @@ def auto_norm(
         case _: return Normalize(vmin=low, vmax=high)
 
 def tile(arr: np.ndarray) -> np.ndarray:
+    """take an image and create a 3x3 grid of that image"""
     return np.r_[np.c_[arr, arr, arr], np.c_[arr, arr, arr], np.c_[arr, arr, arr]]
 
 # Plots
 def show(
         field: np.ndarray,
-        #should i tile the image?
         tile_image: bool = False,
         #x/y axes
         x: np.ndarray|None = None,
@@ -94,12 +107,41 @@ def show(
         #everything else goes into pcolormesh
         **kwargs
 ):
+    """a convinient way to plt.imshow and image and arrange it nicely
+
+    Args:
+        field (np.ndarray): The image to be plotted
+        tile_image (bool, optional): whether to tile the image. Defaults to False.
+        x (np.ndarray | None, optional): x coordinates of pixels. Defaults to None.
+        y (np.ndarray | None, optional): y coordinates of pixels. Defaults to None.
+        fig (plt.Figure, optional): the figure on which to plot. Defaults to None.
+        ax (plt.Axes, optional): the ax on which to plot this image. Defaults to None.
+        figsize (tuple[float, float], optional): unless fig and ax are given plot on a figure of this size. Defaults to (10, 10).
+        show (bool, optional): whether to use the plt.show() command at the end. Defaults to True.
+        cmap (plt.ColorMap, optional): the colormap to use for the image. Defaults to plasma.
+        colorbar (bool, optional): whether to add a colorbar. Defaults to True.
+        colorbar_style (dict, optional): dictionary containing kwargs for the colorbar command. Defaults to {'location':'right', "size":"7%", "pad":0.05}.
+        cticks (list | None, optional): the ticks to use on the colorbar. Defaults to None.
+        units (str | None, optional): label for the colorbar. Defaults to None.
+        contour (np.ndarray | None, optional): whether to put a contour plot on top. Defaults to None.
+        contour_style (dict, optional): kwargs for contour plotting command. Defaults to {'levels': 10, 'colors': 'black'}.
+        xlim (tuple, optional): the limits on the x axis. Defaults to (None, None).
+        ylim (tuple, optional): the limits on the y axis. Defaults to (None, None).
+        title (str | None, optional): the plot title. Defaults to None.
+        save (str, optional): if given save the plot to this path. Defaults to "".
+        dpi (int, optional): dots per inch to save at. Defaults to 100.
+
+    Returns:
+        fig (plt.Figure): The figure on which the plot was put
+        ax (plt.Axes): The ax on which the plot was put
+        img (plt.Artist): the plot artist
+    """
     # prep data
     assert (ndims:=len(field.shape))==2, f"show was given an image with {ndims} dimensions, please provide a 2d array"
     image = tile(field) if tile_image else field
     # check axes
     if x is None: x, y = np.mgrid[:image.shape[0], :image.shape[1]]
-    else: assert (len(x), line(y)) == image.shape, f"Given x of shape {len(x)} and y of shape {len(y)} but image is of shape {image.shape}"
+    else: assert (len(x), len(y)) == image.shape, f"Given x of shape {len(x)} and y of shape {len(y)} but image is of shape {image.shape}"
     # prep figure
     close_fig = True if fig is None else False
     show = show if fig is None else False
@@ -209,21 +251,23 @@ def video_plot(xs, ys, file, fps=10, compress=1, grid=True, scale='linear', **kw
     animation = VideoClip(update, duration=len(ys) / compress / fps)
     animation.write_videofile(file, fps=fps, logger=None, progress_bar=False)
 
-def make_video(name: str, frames: str = 'frames', fps: int = 12, outdir='.', verbose=False):
-    """
-    Takes images from directory "frames" and makes it into a video
-    :param name: name of video, file will be outdir+"/"+name+".png"
-    :param frames: the directory where the frames are stored
-    :param fps: frames per second
-    :param outdir: which directory to put the video in
-    """
-    image_folder = frames
-    image_files = [os.path.join(image_folder, img)
-                   for img in os.listdir(image_folder)
-                   if img.endswith(".png")]
-    image_files = list(np.array(image_files)[np.argsort(image_files)])
-    clip = moviepy.video.io.ImageSequenceClip.ImageSequenceClip(image_files, fps=fps)
-    clip.write_videofile(f'{outdir}/{name}.mp4', verbose=verbose)
+def show_movie(
+        frames: np.ndarray,
+        fname: str|None = None,
+        fps: int = 30,
+        figsize: tuple = (5, 5),
+        **kwargs
+):
+    # create figure and axis 
+    fig, ax = plt.subplots(figsize=figsize)
+    fig,ax,img = show(frames[0], fig=fig, ax=ax, **kwargs)
+    
+    def update(f: int):
+        img.set_array(frames[f])
+        ax.set_title(f"frame: {f}")
+
+    anim = FuncAnimation(fig, update, frames=len(frames))
+    anim.save(fname, fps=fps)
 
 def monitor_video(s, outdir="./monitor/"):
     ensure_path(monitor_frames:=f"/home/x-kgootkin/turbulence/frames/monitor/{s.name}/")

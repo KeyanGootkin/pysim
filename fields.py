@@ -1,5 +1,4 @@
 #pysim imports
-import pysim.parsing as parsing
 from pysim.parsing import Folder, File
 from pysim.utils import verbose_bar
 from pysim.plotting import show, show_video
@@ -9,7 +8,6 @@ import numpy as np
 from h5py import File as h5File
 from functools import cached_property
 from os.path import isdir, isfile
-import builtins
 from matplotlib.cm import plasma as default_cmap
 
 def divergence(Fx, Fy, dx=.5, dy=.5, order=2):
@@ -78,39 +76,39 @@ class ScalarField:
         name: str = None, 
         latex: str = None
     ) -> None:
-        self.name = name 
-        self.latex = latex
-        self.verbose = verbose
+        self.name: str = name 
+        self.latex: str = latex
+        self.verbose: bool = verbose
         self.parent = parent
         #setup cache
-        self.caching = caching
+        self.caching: bool = caching
         self.cache: dict = {}
         #find the correct constructor
-        match type(source):
+        match source:
             #if its a folder
-            case parsing.Folder:
+            case Folder():
                 self.single = False
                 example_file = File(source.children[0])
                 if example_file.extension=="h5": self._from_folder_of_h5(source.path)
-            case builtins.str if isdir(source): 
+            case str() if isdir(source): 
                 self.single = False
                 files = glob(source+"/*")
                 extension = files[0].split(".")[-1]
                 if extension=="h5": self._from_folder_of_h5(source)
             #otherwise its a file
-            case parsing.File:
+            case File():
                 self.single = True
                 if source.extension=="h5": self._from_h5(source.path)
-            case builtins.str if isfile(source): 
+            case str() if isfile(source): 
                 self.single = True
                 extension = source.split(".")[-1] 
                 if extension=="h5": self._from_h5(source)
                 else: self._from_csv(source)
             #or if its already been read
-            case np.ndarray: 
+            case np.ndarray(): 
                 self.single = True
                 self._from_numpy(source)
-            case builtins.list: 
+            case list(): 
                 self.single = True
                 self._from_numpy(np.array(source))
     def __len__(self) -> int: return 1 if self.single else len(self.file_names)
@@ -126,10 +124,10 @@ class ScalarField:
         else: raise StopIteration
     def __getitem__(self, item: int|slice|tuple|list) -> np.ndarray:
         if self.single: return self.array[item]
-        match type(item):
-            case builtins.int: 
+        match item:
+            case int(): 
                 return self.cache[item] if self.caching and item in self.cache.keys() else self.reader(self.file_names[item], item)
-            case builtins.slice:
+            case slice():
                 item_iters = [
                     i for i in range(
                         item.start if not item.start is None else 0, 
@@ -140,7 +138,7 @@ class ScalarField:
                 return np.array([
                     self.cache[i] if self.caching and i in self.cache.keys() else self.reader(self.file_names[i], i) for i in item_iters
                 ])
-            case builtins.tuple|builtins.list: return np.array([
+            case tuple()|list(): return np.array([
                 self.cache[i] if self.caching and i in self.cache.keys() else self.reader(self.file_names[i], i) for i in item
             ])
 
@@ -159,7 +157,6 @@ class ScalarField:
         with h5File(file, 'r') as f:
             output = np.array(f["DATA"][:])
             #GODDMANIT I HATE THAT IT DOES Y,X and not X,Y
-            output = output.transpose((1,0))
             if self.caching: self.cache[item] = output
             return output
     
@@ -226,8 +223,8 @@ class VectorField:
         ], dtype=float if homo else object)
     def __getitem__(self, item: int|slice) -> np.ndarray:
         match type(item):
-            case builtins.int: return np.array([c[item] for c in self.components])
-            case builtins.slice:
+            case int(): return np.array([c[item] for c in self.components])
+            case slice():
                 item_iters = [
                     i for i in range(
                         item.start if not item.start is None else 0, 
@@ -273,8 +270,8 @@ class VectorField:
 
     def curlz(self, item: int|slice, order: int = 2):
         match type(item):
-            case builtins.int: return curlz(self.x[item], self.y[item], order=order)
-            case builtins.slice:
+            case int(): return curlz(self.x[item], self.y[item], order=order)
+            case slice():
                 item_iters = [
                     i for i in range(
                         item.start if not item.start is None else 0, 
@@ -286,8 +283,8 @@ class VectorField:
     def div(self, item: int|slice, order: int = 2):
         if not item: return np.array([divergence(self.x[i], self.y[i], dx=self.dx, dy=self.dy, order=order) for i in range(len(self))])
         match type(item):
-            case builtins.int: return divergence(self.x[item], self.y[item], dx=self.dx, dy=self.dy, order=order)
-            case builtins.slice:
+            case int(): return divergence(self.x[item], self.y[item], dx=self.dx, dy=self.dy, order=order)
+            case slice():
                 item_iters = [
                     i for i in range(
                         item.start if not item.start is None else 0, 
