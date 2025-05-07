@@ -1,3 +1,6 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 #pysim imports
 from pysim.utils import nan_clip
 from pysim.parsing import File, Folder, ensure_path
@@ -8,28 +11,34 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm, SymLogNorm, TwoSlopeNorm, Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
-
-# import moviepy.video.io.ImageSequenceClip
-# from moviepy.editor import VideoClip, VideoFileClip
-# from moviepy.video.io.bindings import mplfig_to_npimage
-
 from functools import wraps
 import os
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap,hex2color
 
-from matplotlib.colors import LinearSegmentedColormap
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                           Definitions                           <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 pink = "#E34F68"
 lightpink = "#E39FAA"
 blue = "#7350E6"
 lightblue = "#AE9FE3"
-shadow = "#1A1219"
+shadow = "#B8B7B8"
 manoaskies = LinearSegmentedColormap.from_list("manoaskies", [pink, blue])
 manoaskies_centered = LinearSegmentedColormap.from_list("manoaskies_centered", [lightpink, pink, shadow, blue, lightblue])
+manoaskies_background_blue = "#0C0524"
+pink2grey = LinearSegmentedColormap.from_list("p2g", [pink, shadow])
+grey2black = LinearSegmentedColormap.from_list("g2b", [shadow, "#000000"])
+colors_list = np.zeros((256, 4))
+colors_list[:128] =  list(hex2color(manoaskies_background_blue))+[1]
+for i in range(28): colors_list[128+i] = pink2grey(i/28)
+for i in range(100): colors_list[156+i] = grey2black(i/150)
+manoaskies_beauty = ListedColormap(colors_list)
 default_cmap = plt.cm.plasma
 
-# <||-----|-----|-----|-----|-----|-----|-----|-----|------|-----|-----|------|------|-----|-----|-----|-----|-----||>
-#                                                   FUNCTIONS
-# <||-----|-----|-----|-----|-----|-----|-----|-----|------|-----|-----|------|------|-----|-----|-----|-----|-----||>
-# Ploting utils
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# # Ploting utils
 def auto_norm(
     norm: str, 
     frames: np.ndarray, 
@@ -71,11 +80,9 @@ def auto_norm(
             vcenter = center if not center is None else 0 if np.abs(mu)-sig > 0 else mu
             return TwoSlopeNorm(vmin=low, vcenter=vcenter, vmax=high)
         case _: return Normalize(vmin=low, vmax=high)
-
 def tile(arr: np.ndarray) -> np.ndarray:
     """take an image and create a 3x3 grid of that image"""
     return np.r_[np.c_[arr, arr, arr], np.c_[arr, arr, arr], np.c_[arr, arr, arr]]
-
 # Plots
 def show(
         field: np.ndarray,
@@ -86,6 +93,7 @@ def show(
         #figure setup
         fig = None,
         ax = None,
+        axis: bool = True,
         figsize: tuple[float, float] = (10, 10),
         show: bool = True,
         #plot parameters
@@ -116,6 +124,7 @@ def show(
         y (np.ndarray | None, optional): y coordinates of pixels. Defaults to None.
         fig (plt.Figure, optional): the figure on which to plot. Defaults to None.
         ax (plt.Axes, optional): the ax on which to plot this image. Defaults to None.
+        axis (bool, optional): whether to include the whole axis, if False then only the plot area will be shown.
         figsize (tuple[float, float], optional): unless fig and ax are given plot on a figure of this size. Defaults to (10, 10).
         show (bool, optional): whether to use the plt.show() command at the end. Defaults to True.
         cmap (plt.ColorMap, optional): the colormap to use for the image. Defaults to plasma.
@@ -146,6 +155,10 @@ def show(
     close_fig = True if fig is None else False
     show = show if fig is None else False
     if fig is None: (fig, ax) = plt.subplots(figsize=figsize)
+    if not axis: 
+        ax.axis('off')
+        ax.set_position([0, 0, 1, 1])
+        colorbar = False
     # plot data
     img = ax.pcolormesh(x, y, image, cmap=cmap, **kwargs)
     # colorbar
@@ -170,7 +183,6 @@ def show(
     if show: plt.show()
     if close_fig: plt.close(fig)
     else: return fig, ax, img
-
 def diagnose_frame(
         s,
         i: int,
@@ -221,7 +233,6 @@ def diagnose_frame(
         return None if not return_plots else jtrack
     if not file_name.endswith(".png"): file_name += ".png"
     plt.savefig(outdir + f"/{s.name}/" + file_name)
-
 # Videos
 def video_plot(xs, ys, file, fps=10, compress=1, grid=True, scale='linear', **kwargs):
     fig, ax = plt.subplots(dpi=100)
@@ -250,25 +261,25 @@ def video_plot(xs, ys, file, fps=10, compress=1, grid=True, scale='linear', **kw
 
     animation = VideoClip(update, duration=len(ys) / compress / fps)
     animation.write_videofile(file, fps=fps, logger=None, progress_bar=False)
-
 def show_movie(
         frames: np.ndarray,
         fname: str|None = None,
         fps: int = 30,
         figsize: tuple = (5, 5),
+        title: str = 'default',
         **kwargs
 ):
     # create figure and axis 
     fig, ax = plt.subplots(figsize=figsize)
     fig,ax,img = show(frames[0], fig=fig, ax=ax, **kwargs)
-    
     def update(f: int):
         img.set_array(frames[f])
-        ax.set_title(f"frame: {f}")
+        match title:
+            case 'default': ax.set_title(f"frame: {f}")
+            case str(): ax.set_title(title)
 
     anim = FuncAnimation(fig, update, frames=len(frames))
     anim.save(fname, fps=fps)
-
 def monitor_video(s, outdir="./monitor/"):
     ensure_path(monitor_frames:=f"/home/x-kgootkin/turbulence/frames/monitor/{s.name}/")
     already_there = glob(monitor_frames+"*")
@@ -280,10 +291,9 @@ def monitor_video(s, outdir="./monitor/"):
         diagnose_frame(s, i, '', full_path=full_path, track_params=[jz])
     make_video(f"{s.name}_monitor", monitor_frames, outdir=outdir)
 
-# <||-----|-----|-----|-----|-----|-----|-----|-----|------|-----|-----|------|------|-----|-----|-----|-----|-----||>
-#                                                   DECORATORS
-# <||-----|-----|-----|-----|-----|-----|-----|-----|------|-----|-----|------|------|-----|-----|-----|-----|-----||>
-
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Decorators                           <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 def line_video(
     compress: int = 1, fps: int = 10, fs: tuple = (5,5),grid: bool = True,
     xlimits = None, ylimits = None, scale = None, xscale = None, yscale = None,
@@ -339,7 +349,6 @@ def line_video(
             animation.write_videofile(save+".mp4", fps=fps, logger=None)
         return line_video_wrapper
     return line_video_decorator
-
 def show_video(
     name: str = 'none', 
     latex: str = None, 
@@ -383,13 +392,3 @@ def show_video(
             animation.write_videofile(f"{savedir}/{s.name}_{name}.mp4", fps=fps)
         return simple_video_wrapper
     return simple_video_decorator
-
-
-@line_video(yscale='log', xscale='log', fps=60, ylimits=(1e-5, 1), xlimits=(1e-3, 1e2))
-def energy_evolution(s):
-    end = np.argmin(abs(s.tau - 1))
-    return np.array([
-            s.energy_grid[i] for i in range(end)
-        ]), np.array([
-            s.energy_grid[i]*s.energy_pdf[i] for i in range(end)
-        ])

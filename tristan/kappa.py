@@ -1,8 +1,15 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+#pysim imports
 from pysim.tristan.tristan import Tristan, TristanParticleSpecies, TristanParticleQuantity
 from pysim.fields import VectorField
-
+#non-pysim imports
 import numpy as np
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class MaskedTristanParticleQuantity(TristanParticleQuantity):
     def __init__(
             self,
@@ -88,8 +95,6 @@ class SubPopulation(TristanParticleSpecies):
             "ch"+self.sig, self.param, self.value, 
             species=self.parent_species, name="ch", latex=rf"weight$", **kwargs
         )
-
-
 
 class KappaSim(Tristan):
     def __init__(

@@ -1,3 +1,6 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 #pysim imports
 from pysim.parsing import File
 from pysim.environment import dHybridRtemplate
@@ -5,6 +8,9 @@ from pysim.environment import dHybridRtemplate
 import numpy as np
 from datetime import datetime
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # fortran parsing
 def input_match(input_code: str):
     """
@@ -45,7 +51,6 @@ def input_match(input_code: str):
         ###### else ######
         case other:
             raise ValueError(f"I couldn't recognize the code you gave me\n{fortran_code}")
-
 def python_match_input(python_code) -> str:
     """
     matches python objects to dHybridR input file equivilents
@@ -67,7 +72,6 @@ def python_match_input(python_code) -> str:
             return f"{python_code}"
         case string if type(string) == str:
             return f'"{python_code}"'
-
 def python2input(code):
     """
     take an iterable and convert each object to dHybridR input file equivalents
@@ -78,7 +82,6 @@ def python2input(code):
         return python_match_input(code)
     input_code = [f"{python_match_input(x)}," for x in code]
     return "".join(input_code)
-
 def input2python(code):
     """
     converts dHybridR input file code into equivilent python code
@@ -89,18 +92,17 @@ def input2python(code):
     if len(python_code) == 1:
         return python_code[0]
     return python_code
-
 def is_input_header_boarder(line: str) -> bool:
     return len(chars:=np.unique([x for x in line]))==3 and all(chars == np.unique([x for x in "! -"]))
-
 def is_input_section_header(line: str) -> bool:
     return line.startswith("!---") or line.startswith("! ---")
-
 def is_input_species_section_header(line: str, species: int = None) -> bool:
     if species: return is_input_section_header(line) and f"for species {species}" in line 
     else: return any([is_input_section_header(line) and f"for species {sp}" in line for sp in range(10)])
 
-
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class InputParameter:
     def __init__(self, name: str, value, comment: str = None) -> None:
         self.name = name
@@ -186,7 +188,7 @@ class dHybridRinput(File):
     ])
     def __init__(self, path: str) -> None:
         #init file properties
-        File.__init__(self, path, master=dHybridRtemplate.path+"input/input", executable=False)
+        File.__init__(self, path, master=dHybridRtemplate.path+"/input/input", executable=False)
         #if doesn't exist, make a copy from master
         # if not self.exists: self.update()
         #read in the current file
@@ -272,7 +274,7 @@ class dHybridRinput(File):
 class dHybridRout(File):
     def __init__(self, path: str) -> None:
         super().__init__(path)
-        self.read()
+        if self.exists: self.read()
         # if self.end and self.start:
         #     self.dt: datetime = (self.end - self.start)
         #     self.runtime: float = self.dt.seconds / 60. / 60.

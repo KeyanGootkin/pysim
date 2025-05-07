@@ -1,12 +1,20 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+#pysim imports
 from pysim.utils import yesno 
 from pysim.parsing import Folder
 from pysim.fields import ScalarField, VectorField
 from pysim.simulation import GenericSimulation
 from pysim.athena.athena_read import athdf
+#non-pysim imports
 from glob import glob 
 import numpy as np
 import builtins
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 def get_mhd_config(mhd_run_dir, config_name):
     """Get MHD run information from the configuration file
 
@@ -34,6 +42,9 @@ def get_mhd_config(mhd_run_dir, config_name):
                     mhd_config[block_name][ltmp] = data[0].strip()
     return mhd_config
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class AthenaParameter(ScalarField):
     def __init__(
         self, 
@@ -100,4 +111,3 @@ class Athena(GenericSimulation):
         )
         self.density = AthenaParameter("rho", name='density', latex=r"$\rho$", **kwargs)
         self.P = AthenaParameter("press", name="pressure", latex="$P$", **kwargs)
-        

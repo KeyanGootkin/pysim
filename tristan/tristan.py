@@ -1,13 +1,12 @@
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # >-|===|>                             Imports                             <|===|-<
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
-
+#pysim imports
 from pysim.parsing import Folder
 from pysim.fields import ScalarField, VectorField
 from pysim.simulation import GenericSimulation
-
 from pysim.dhybridr.io import InputParameter
-
+#non-pysim imports
 from glob import glob
 import numpy as np
 from h5py import File
@@ -106,7 +105,6 @@ tristan_param_file_convert = {
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # >-|===|>                            Functions                            <|===|-<
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
-
 def tristan_loader(
         sim_path: str, inds: list[int], params: list[str], 
         zfill_level: int = 3, padding: int = 3
@@ -129,7 +127,6 @@ def tristan_loader(
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # >-|===|>                             Classes                             <|===|-<
 # !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
-
 class TristanInput:
     def __init__(
             self,

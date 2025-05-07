@@ -1,3 +1,6 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 #pysim imports
 from pysim.parsing import Folder, File
 from pysim.utils import verbose_bar
@@ -10,12 +13,14 @@ from functools import cached_property
 from os.path import isdir, isfile
 from matplotlib.cm import plasma as default_cmap
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 def divergence(Fx, Fy, dx=.5, dy=.5, order=2):
     assert len(Fx.shape)==2, "sorry, only accept 2 spatial dimensions rn :("
     dFdx = np.roll(Fx, order, axis=1) - np.roll(Fx, -order, axis=1) / dx
     dFdy = np.roll(Fy, order, axis=0) - np.roll(Fy, -order, axis=0) / dy
     return (dFdx + dFdy) / (2 * order)
-
 def curlz(X, Y, order: int = 2) -> np.ndarray:
     """
     take the z-component of the curl at each point in a field
@@ -28,13 +33,15 @@ def curlz(X, Y, order: int = 2) -> np.ndarray:
         (np.roll(X, order, axis=0) - np.roll(X, -order, axis=0))
     ) / (2 * order)
     return c
-
 def calc_psi(Bx, By, dx, dy):
     psi = np.zeros(Bx.shape)
     psi[1:,0] = np.cumsum(Bx[1:,0])*dy
     psi[:,1:] = (psi[:,0] - np.cumsum(By[:,1:], axis=1).T*dx).T
     return psi
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class ScalarField:
     """
     a special class of arrays used to efficiently interact with the fields output by simulations

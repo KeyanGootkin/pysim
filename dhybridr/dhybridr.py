@@ -1,3 +1,6 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 #pysim imports
 from pysim.utils import yesno 
 from pysim.parsing import Folder
@@ -12,6 +15,9 @@ import numpy as np
 from h5py import File as h5File
 from os import system
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 # simulation parsing
 def extract_energy(file_name: str) -> tuple:
     with h5File(file_name, 'r') as file:
@@ -22,7 +28,9 @@ def extract_energy(file_name: str) -> tuple:
         E = np.exp(lne)
         return E, fE, dlne
 
-
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class dHybridR(GenericSimulation):
     """
     A simulation class to interact with dHybridR simulations in python
@@ -86,7 +94,6 @@ class dHybridR(GenericSimulation):
             self.energy_pdf,
             self.dlne
         ] = np.array([[*extract_energy(f)] for f in self.etx1.file_names], dtype=object).T
-
 
 class TurbSim(dHybridR):
     def __init__(

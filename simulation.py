@@ -1,8 +1,13 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 from pysim.utils import yesno
 from pysim.parsing import Folder
 from pysim.environment import simulationDir
 
-
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class GenericSimulation:
     def __init__(
             self, 
@@ -33,7 +38,7 @@ class GenericSimulation:
         #if the given path doesn't exist, check the default simulation directory 
         if not self.dir.exists: 
             if self.verbose: print(f"No simulation found in {path}, checking default simulation directory: {simulationDir.path}...")
-            default_path: str = simulationDir.path+self.name
+            default_path: str = f"{simulationDir.path}/{self.name}"
             self.path = default_path
             self.dir = Folder(self.path)
             #if simulation isn't in default simulation directory either copy a template to that location or raise an error

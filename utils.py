@@ -1,11 +1,15 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 import numpy as np
 from contextlib import contextmanager
 from tqdm import tqdm
 import inspect
-
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 def where_closest(arr:np.ndarray, x): return np.argmin(np.abs(arr-x))
 def where_between(arr:np.ndarray, low, high): return np.where((arr>=low)&(arr<=high))
-
 def bin_this(x, y, n_bins=50, func=np.nanmean):
     xbins = np.linspace(np.nanmin(x),np.nanmax(x),n_bins)
     Y,error = list(),list()
@@ -16,8 +20,6 @@ def bin_this(x, y, n_bins=50, func=np.nanmean):
         Y.append(func(yin))
         error.append(np.nanstd(yin)/np.sqrt(len(yin)))
     return np.array(xbins)[:-1],np.array(Y),np.array(error)
-
-
 @contextmanager
 def redirect_to_tqdm():
     # Store builtin print
@@ -35,15 +37,12 @@ def redirect_to_tqdm():
         yield
     finally:
         inspect.builtins.print = old_print
-
 def progress_bar(iterator, **kwargs):
     with redirect_to_tqdm():
         for x in tqdm(iterator, **kwargs):
             yield x
-
 def verbose_bar(iterator, verbose, **kwargs):
     return progress_bar(iterator, **kwargs) if verbose else iterator
-
 def yesno(prompt: str):
     """
     prompt the user to either reply yes or no
@@ -67,16 +66,13 @@ def yesno(prompt: str):
                 raise ValueError("need a response with either y or n in it.")
 
         return retry_yesno()
-
 def nan_clip(*args):
     mask = ~np.any([np.isnan(a) for a in args], axis=0)
     nanless_args = tuple([np.array(a)[mask] for a in args])
     return nanless_args
-
 # Spectrum Functions
 def kspec(image: np.ndarray) -> np.ndarray:
     return np.absolute(np.fft.fftshift(np.fft.fft2(image) / (1. * image.shape[0] * image.shape[1])))**2
-
 def kspec1d(image: np.ndarray, bins: int = 100, return_bin_edges: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     k = kspec(image)
     Ny, Nx = image.shape

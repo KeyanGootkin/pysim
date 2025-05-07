@@ -1,3 +1,6 @@
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Imports                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 #pysim imports
 from pysim.parsing import File, Folder
 from pysim.fields import ScalarField, VectorField
@@ -8,8 +11,10 @@ import numpy as np
 from numpy import pi
 from collections.abc import Iterable
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                            Functions                            <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 def field_dot(A: np.ndarray, B: np.ndarray) -> np.ndarray: return np.sum(A * B, axis=0)
-
 def parse_config_value(val:str):
     """take a string representing the value of a configuration parameter and figure out what python type it should be. 
 
@@ -24,6 +29,9 @@ def parse_config_value(val:str):
     elif val[0] in "1234567890": return int(val)
     else: return val
 
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
+# >-|===|>                             Classes                             <|===|-<
+# !==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==!==
 class dHybridRconfig(File):
     def __init__(self, parent, mode: str|None = None) -> None:
         """Container for the information needed to initialize a dHybridR simulation
@@ -404,5 +412,4 @@ class FlareWaveInit(dHybridRinitializer):
             (unknown_variable / self.L[0]) * np.cos(2*np.pi*x / self.L[0]) * np.sin(2*np.pi*x / self.L[0])**10
         for i in range(len(y))])
         Bz = np.sqrt(self.B0**2 + self.Bg**2 - Bx**2)
-        self.B = np.array([Bx.T, By.T, Bz.T], dtype=np.float32)
-    
+        self.B = np.array([Bx.T, By.T, Bz.T], dtype=np.float32)   
